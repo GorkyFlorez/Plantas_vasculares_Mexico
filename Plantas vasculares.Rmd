@@ -1,0 +1,177 @@
+---
+title: "Plantas vasculares en Mexico"
+author: "Gorky Florez Castillo"
+date: "10/8/2021"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+    theme: cerulean
+---
+
+```{r setup, include=FALSE}
+#------------------------------------------------------------------------
+require(pacman)
+pacman::p_load(sf, ggspatial, ggrepel, openxlsx, ggpubr,
+               png,broom,tidyverse,leaflet, leaflet.extras, leaflet.providers,leafem,htmlwidgets, sp,
+               sf,readxl,mapview,RColorBrewer,viridis,Rgb,ggplot2,rmarkdown,flexdashboard,
+               crosstalk, DT,dplyr,htmltools,rgdal, broom,leafem,mapview, Rgb, raster,rmarkdown, 
+               mapedit, tibble, cptcity)
+#------------------------------------------------------------------------
+Mexico    <- getData('GADM', country='Mexico', level=1) %>% st_as_sf()       # Extracion del paiz
+Data      <- read.xlsx("Excel/Data_mexico.xlsx", sheet="Hoja1") 
+Mexico_dat<- cbind(Mexico, Data) 
+#------------------------------------------------------------------------
+cortes1 <- c(100,200,400,600,800)
+cortes <- c(1402,2765,4195,5013,6900)
+#Definiendo el Logo
+m="https://images.vexels.com/media/users/3/143561/isolated/preview/afa3aa927b63061e3b0222b7dab9cdbf-ubicaci--n-n--utica-norte-flecha-vintage-by-vexels.png"
+pal_colores <- colorBin("YlOrRd",domain = Mexico_dat$Angiospermas, bins=cortes)
+tooltip <- sprintf("<strong>%s</strong><br/>%.1f Numero de Plantas",
+                   Mexico_dat$NAME_1,
+                   Mexico_dat$Angiospermas)%>%
+  lapply(htmltools::HTML)
+
+A<-ggplot()+
+  geom_sf(data= Mexico_dat, aes(fill= Plantas.vasculares), alpha=0.5)+
+  scale_fill_distiller(palette   = "YlOrRd", direction = 1,
+                     na.value = 'white', breaks = cortes ,
+                     labels = c("[1402 - 2764] ","[2765 - 4194]", "[4195 - 5012]", "[5013 - 6899]", "[6900 - 10863]"), 
+                     name="Plantas vasculares\n(numero)")+
+  guides(fill = guide_legend(title.position = "right",direction = "vertical",
+                             title.theme = element_text(angle = 90, size = 12, colour = "black"),
+                             barheight = .5, barwidth = .95,
+                             title.hjust = 0.5, raster = FALSE,
+                             title = 'Plantas vasculares\n(numero)'))+
+  theme_void()+
+  annotation_scale(location = "bl", width_hint = 0.4) +
+  annotation_north_arrow(location = "bl", which_north = "true", 
+                         pad_x = unit(0.75, "in"), pad_y = unit(0.5, "in"),
+                         style = north_arrow_fancy_orienteering)+
+  theme(legend.position = c(.70, .80))
+
+AA<-leaflet() %>%
+  addControl(html = "<p><strong><em>Plantas vasculares en Mexico</em></strong></p>", position ="topright")%>%
+  addLogo(m,url = "https://images.vexels.com/media/users/3/143561/isolated/preview/afa3aa927b63061e3b0222b7dab9cdbf-ubicaci--n-n--utica-norte-flecha-vintage-by-vexels.png",
+          position = "topleft", offset.x = 50,offset.y = 10,width = 100,height = 100)%>%
+  addPolygons(data= Mexico_dat,
+              color = "white",
+              stroke = T,
+              weight ="1",
+              smoothFactor = 0.3,
+              fillOpacity = 0.7,
+              fillColor = ~pal_colores(Mexico_dat$Angiospermas),
+              label = tooltip,
+              group = "Plantas vasculares")%>%
+  addScaleBar(position = "bottomright",options = scaleBarOptions(maxWidth = 100, metric = TRUE,
+                                                                 imperial = TRUE,updateWhenIdle = TRUE))%>%
+  addLayersControl(baseGroups = c("OSM","Satellite"),overlayGroups = c("Plantas vasculares"),
+                   position = "topright",options = layersControlOptions(collapsed = T))%>%
+  addProviderTiles(providers$OpenStreetMap, group = "OSM")%>%
+  addProviderTiles(providers$Esri.WorldImagery, group = "Satellite")%>%
+  addLegend(pal = pal_colores, values = Mexico_dat$Angiospermas,
+            labFormat = labelFormat(suffix = "Pla/Est"),
+            opacity = 0.7, title = 'Numero de plantas \n(Estados)', position = "bottomleft")%>%
+  addMiniMap(tiles = providers$Esri.WorldImagery,toggleDisplay = TRUE) 
+
+
+B <-ggplot()+
+  geom_sf(data= Mexico_dat, aes(fill=Hongos), alpha=0.5)+
+  scale_fill_distiller(palette   = "YlOrRd", direction = 1,
+                       na.value = 'white', breaks = cortes1 ,
+                       labels = c("[100- 199] ","[200 - 399]", "[400 - 599]", "[600 - 799]", "[800 - 987]"), 
+                       name="Hongos\n(numero)")+
+  guides(fill = guide_legend(title.position = "right",direction = "vertical",
+                             title.theme = element_text(angle = 90, size = 12, colour = "black"),
+                             barheight = .5, barwidth = .95,
+                             title.hjust = 0.5, raster = FALSE,
+                             title = 'Hongos\n(numero)'))+
+  theme_void()+
+  annotation_scale(location = "bl", width_hint = 0.4) +
+  annotation_north_arrow(location = "bl", which_north = "true", 
+                         pad_x = unit(0.75, "in"), pad_y = unit(0.5, "in"),
+                         style = north_arrow_fancy_orienteering)+
+  theme(legend.position = c(.70, .80))
+```
+
+Comparacion de mapas estaticos y tematicos 
+===================================== 
+
+Column {data-width=550}
+-----------------------------------------------------------------------
+
+### Map Plantas vasculares en Mexico
+```{r map}
+AA
+```
+
+Column {data-width=450}
+-----------------------------------------------------------------------
+
+### Mapa de Plantas vasculares en Mexico Estatico
+
+```{r map1}
+A                                                  # Llamamos el objeto 
+```
+
+### Mapa de Hongos en Mexico estatico
+```{r fig.width=8, fig.height=6}
+B
+```
+
+
+Information {data-orientation=rows data-icon="fa-info-circle"}
+===================================== 
+
+### Información de datos
+
+LEn cuanto al número de especies por grupo taxonómico, según la el Catálogo de autoridades taxonómicas de especies de la biota con distribución en México de la Comisión Nacional para el Conocimiento y Uso de la Biodiversidad (Conabio), en 2018 se tenían registradas 26 704 especies de plantas vasculares, 4 474 especies de hongos, 5 724 especies de vertebrados y cerca de 100 mil especies de invertebrados; incluidos corales, moluscos, crustáceos, arácnidos, insectos, entre otros (Conabio, 2018a). El mayor número de las plantas vasculares corresponde a las angiospermas (con 25 372 especies), principalmente de las familias de las compuestas (Asteraceae, 3 474 especies), las leguminosas (Fabaceae, 2 161 especies) y las cactáceas (Cactaceae, 769 especies; Cuadro D3_BIODIV02_11)).
+
+Si se observa la geografía de la riqueza biológica vegetal, los estados del sur, en los que se localizan algunos de los ecosistemas con mayor biodiversidad del país (como las selvas altas perennifolias o los bosques mesófilos de montaña) son los que albergan la mayor riqueza: Oaxaca posee 41% de las especies de plantas vasculares nacionales (10 863 especies), Veracruz 37% (9 868 especies) y Chiapas 36% (9 584 especies; Mapa 4.1; Conabio, 2017).
+
+Fuente:
+Conabio. Catálogo de autoridades taxonómicas de especies de la biota con distribución en México. Base de datos SNIB-Conabio. México. 2018
+
+### NOTA BIOGRÁFICA
+
+Gorky florez Castillo, nacido en el Departamento del Cusco, Provincia de la Convención, Distrito de Santa Ana el 07 de agosto de 1997. Curso sus estudios primarios en la Institución Educativa Juan de la Cruz Monte Salas y los secundarios en el “Glorioso colegio Emblemático Manco II”, de la ciudad de Quillabamba. 
+
+Bachiller con mención en la Carrera Profesional de Ingeniería Forestal y Medio Ambiente de la Universidad Nacional Amazónica de Madre de Dios el año, desde el 23 de diciembre del 2020. Participación activa en Proyectos de investigación u otras actividades que involucren de nuestros recursos Naturales, a la conservación, a la educación y conciencia ambiental, de esta forma contribuir al desarrollo del departamento de Madre de Dios y mi país.
+
+Realizo un artículo de investigación de caracterización morfológica y estructura poblacional de Euterpe precatoria (Arecaceae) en dos tipos de bosque (bosque de tierra firme y bosque inundable publicado en la revista ecuatoriana Bosques Latitud Cero (Florez-castillo, Nieto-ramos y Garate-quispe 2020).
+
+
+
+### Otra información
+Que es  Google Earth Engine
+Google Earth Engine es una plataforma basada en la nube que permite a los usuarios tener un fácil acceso a un archivo de datos de teledetección a escala de petabytes y ejecutar análisis geoespaciales en la infraestructura de Google. Actualmente, Google ofrece soporte solo para Python y JavaScript. Rgee llenará el vacío comenzando a brindar apoyo a R. A continuación, encontrará la comparación entre la sintaxis de rgee y las dos bibliotecas cliente compatibles con Google.
+
+El repositorio de GitHub y el código subyacente de este panel se pueden encontrar aquí. [here]()
+
+Este dashbaord se desarrolló utilizando [R Studio] (https://www.rstudio.com/) y los siguientes paquetes:
+
+* [RMarkdown](https://rmarkdown.rstudio.com/) para análisis reproducibles en documentos de calidad
+*  [flexdashbaord](https://rmarkdown.rstudio.com/flexdashboard/) para formatear en RMarkdown
+* [DT](https://rstudio.github.io/DT/) para tablas interactivas
+* [crosstalk](https://rstudio.github.io/crosstalk/) para widgets html interactivos en RMarkdown
+
+
+Se presenta otros manuales y ejemplos del uso de Google Earth Engine en RStudio
+
+* [Aviso de friaje - (SENAMHI)](https://gorkyflorez.github.io/Aviso_Friaje_MDD/) 
+*  [NDVI de Yungay](https://gorkyflorez.github.io/Google_Earth_Engine_RStudio_/) 
+* [Calcule la tendencia de las luces nocturnas ](https://gorkyflorez.github.io/luces_nocturnas_GEE/) 
+* [Perdida de la cobertura boscosa en la cuenca chonta](https://gorkyflorez.github.io/Analisis_cambio_cobertura_boscosa_microcuenca_chonta/) 
+
+* [INCREMENTO DE TEMPERATURA DIURNA EN LA SELVA](https://gorkyflorez.github.io/Aviso_SENAMHI_155/) 
+*  [NDVI de Yungay](https://gorkyflorez.github.io/Google_Earth_Engine_RStudio_/) 
+* [Índice de agua de diferencia normalizada Sentinel-2 (NDWI)](https://gorkyflorez.github.io/Google_Earth_Engine_NDWI_Dhaka/) 
+* [NDVI en Git de Madre de Dios 2013-2014](https://gorkyflorez.github.io/GEE_NDVI_MDD_Arequi/) 
+* [Modelo digital de elevación](https://gorkyflorez.github.io/GEE_DEM/) 
+
+
+
+
+
+
+
